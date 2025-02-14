@@ -19,7 +19,7 @@
 #include "main.h"
 
 
-uint8 Os_Tick = 0;
+
 volatile uint8 task1_Tick = 0;
 volatile uint8 task2_Tick = 0;
 volatile uint8 task3_Tick = 0;
@@ -28,7 +28,9 @@ volatile uint8 task4_Tick = 0;
 int main(void)
 {
 	GPIO_u8PinInit(&BUILT_IN_LED);
-	GPIO_u8SetPinValue(PORTA, PIN5, PIN_HIGH);
+	GPIO_u8PinInit(&LED2);
+	GPIO_u8PinInit(&LED3);
+	GPIO_u8PinInit(&LED4);
 
 	Enable_FaultException();
 	SYSTICK_Init();
@@ -52,6 +54,9 @@ int main(void)
 void Task1_Handler(){
 	while(1){
 		TOG_BIT(task1_Tick, 1);
+		OS_TaskDelay(3000);
+		//printf("Task1 Handler \n");
+		//TOG_BIT((GPIOA->ODR), 6);
 	}
 
 }
@@ -59,6 +64,10 @@ void Task1_Handler(){
 void Task2_Handler(){
 	while(1){
 		TOG_BIT(task2_Tick, 1);
+		OS_TaskDelay(3000);
+
+		//printf("Task2 Handler \n");
+		//TOG_BIT((GPIOA->ODR), 7);
 	}
 
 
@@ -67,13 +76,9 @@ void Task2_Handler(){
 void Task3_Handler(){
 	while(1){
 		TOG_BIT(task3_Tick, 1);
-	}
-
-}
-
-void Task4_Handler(){
-	while(1){
-		TOG_BIT(task4_Tick, 1);
+		OS_TaskDelay(3000);
+		//printf("Task3 Handler \n");
+		//TOG_BIT((GPIOB->ODR), 6);
 	}
 
 }

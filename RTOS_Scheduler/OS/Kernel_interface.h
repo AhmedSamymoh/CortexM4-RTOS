@@ -16,9 +16,25 @@
 #include "Std_Types.h"
 #include "../MCAL/SYSTCK/SYSTICK_interface.h"
 #include "Kernel_Cfg.h"
+#include "main.h"
+
 
 
 /**************************************** Section: Data Type Declarations **************************************/
+
+typedef enum {
+	TASK_ReadyState,
+	TASK_BlockedState,
+} TaskState_t;
+
+typedef struct {
+	uint32 pspValue;
+	uint32 BlockCount;
+	TaskState_t CurrentState;
+	void(*TaskHandler)();
+
+} Task_ControlBlock_t;
+
 
 
 /****************************************** Section: Macro Declarations ****************************************/
@@ -29,10 +45,10 @@
 #define TASK_STACK_SIZE 		1024U
 #define SCHED_STACK_SIZE 		1024U
 
-#define T1_STACK_START			(SRAM_END)
-#define T2_STACK_START			((SRAM_END) - (1* (TASK_STACK_SIZE)) )
-#define T3_STACK_START			((SRAM_END) - (2* (TASK_STACK_SIZE)) )
-#define T4_STACK_START			((SRAM_END) - (3* (TASK_STACK_SIZE)) )
+#define IDLE_Task_STACK_START	(SRAM_END)
+#define T1_STACK_START			((SRAM_END) - (1* (TASK_STACK_SIZE)) )
+#define T2_STACK_START			((SRAM_END) - (2* (TASK_STACK_SIZE)) )
+#define T3_STACK_START			((SRAM_END) - (3* (TASK_STACK_SIZE)) )
 #define SCHED_TASK_STACK		((SRAM_END) - (4* (TASK_STACK_SIZE)) )
 
 #define Dummy_xPSR				0x01000000
@@ -43,17 +59,21 @@
 
 /************************************* Section : Global Variables Definitions **********************************/
 
+
+extern volatile uint32 Os_Tick;
+extern volatile uint32 Os_Idle_Task_Tick;
+
 extern void Task1_Handler();
 extern void Task2_Handler();
 extern void Task3_Handler();
-extern void Task4_Handler();
+
 
 /************************************* Section : Macro Functions Definitions ***********************************/
 
 /**************************************** Section : Functions Declarations *************************************/
 
-
-
+void OS_TaskDelay(uint32 Copy_BlockCount);
+void OS_IdleTask();
 void UpdateNextTask();
 void Stack_InitTasks_Stack();
 Std_ReturnType Enable_FaultException();

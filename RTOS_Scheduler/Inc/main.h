@@ -15,6 +15,7 @@
 
 
 #include <stdint.h>
+#include <stdio.h>
 #include "../MCAL/GPIO/GPIO_interface.h"
 #include "../MCAL/SYSTCK/SYSTICK_interface.h"
 #include "../OS/Kernel_interface.h"
@@ -24,7 +25,6 @@
 void Task1_Handler();
 void Task2_Handler();
 void Task3_Handler();
-void Task4_Handler();
 
 /**************************************** Section: Data Type Declarations **************************************/
 
@@ -32,7 +32,8 @@ void Task4_Handler();
 /****************************************** Section: Macro Declarations ****************************************/
 
 /************************************* Section : Global Variables Definitions **********************************/
-
+extern uint8 Os_Tick_Tog;
+extern volatile uint32 Os_Idle_Task_Tick;
 /************************************* Section : Macro Functions Definitions ***********************************/
 
 /**************************************** Section : Functions Declarations *************************************/

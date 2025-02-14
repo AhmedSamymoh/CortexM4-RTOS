@@ -117,6 +117,9 @@ typedef struct
 /************************************* Section : Macro Functions Definitions ***********************************/
 extern GPIO_Pin_Config_t BUILT_IN_LED;
 extern GPIO_Pin_Config_t LED2;
+extern GPIO_Pin_Config_t LED3;
+extern GPIO_Pin_Config_t LED4;
+
 /**************************************** Section : Functions Declarations *************************************/
 
 Std_ReturnType GPIO_u8PinInit(const GPIO_Pin_Config_t * PinConfig);

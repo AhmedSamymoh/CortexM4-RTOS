@@ -24,6 +24,7 @@ GPIO_Pin_Config_t BUILT_IN_LED = {
 	.PullType = NO_PULL,
 	.AltFunc = 0
 };
+
 GPIO_Pin_Config_t LED2 = {
 	.Port = PORTA,
 	.Pin = PIN6,
@@ -33,7 +34,25 @@ GPIO_Pin_Config_t LED2 = {
 	.PullType = NO_PULL,
 	.AltFunc = 0
 };
+GPIO_Pin_Config_t LED3 = {
+	.Port = PORTA,
+	.Pin = PIN7,
+	.Mode = OUTPUT,
+	.OutputType = PUSH_PULL,
+	.Speed = LOW,
+	.PullType = NO_PULL,
+	.AltFunc = 0
+};
 
+GPIO_Pin_Config_t LED4 = {
+	.Port = PORTB,
+	.Pin = PIN6,
+	.Mode = OUTPUT,
+	.OutputType = PUSH_PULL,
+	.Speed = LOW,
+	.PullType = NO_PULL,
+	.AltFunc = 0
+};
 /*************************************** Section : Functions Definitions ***************************************/
 
 

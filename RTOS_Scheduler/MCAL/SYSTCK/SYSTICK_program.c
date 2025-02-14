@@ -17,8 +17,8 @@
 
 /************************************ Section : Global Variables Definitions ************************************/
 
-static volatile uint32 uwTick = 0;
-extern uint8 Os_Tick;
+volatile uint32 Os_Tick = 0;
+uint8 Os_Tick_Tog;
 /*************************************** Section : Functions Definitions ***************************************/
 
 Std_ReturnType SYSTICK_Init(void){
@@ -72,8 +72,10 @@ Std_ReturnType SYSTICK_Init(void){
  * |-------| |-----------------------------|
  */
 __attribute__ ((naked))void SysTick_Handler(void) {
-    uwTick++;
-    TOG_BIT(Os_Tick, 1); //TOG_BIT((GPIOA->ODR), 5);
+	  Os_Tick++;
+    TOG_BIT(Os_Tick_Tog, 1);
+
+    TOG_BIT((GPIOA->ODR), 5);
 
     /* --- Save the context of the current task --- */
 	__asm volatile("MRS R0, PSP");

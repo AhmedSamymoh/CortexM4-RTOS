@@ -53,6 +53,8 @@ typedef enum
 
 
 /************************************* Section : Global Variables Definitions **********************************/
+extern uint8 Os_Tick_Tog;
+extern volatile uint32 Os_Tick;
 
 
 /************************************* Section : Macro Functions Definitions ***********************************/

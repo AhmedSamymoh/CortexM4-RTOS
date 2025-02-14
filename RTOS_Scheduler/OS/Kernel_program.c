@@ -11,28 +11,51 @@
 /********************************************** Section : Includes ********************************************/
 
 #include "Kernel_interface.h"
-#include "main.h"
 
 /************************************* Section : Macro Functions Definitions ************************************/
 
 /************************************ Section : Global Variables Definitions ************************************/
 
-uint8 Global_Current_Task = 0;
+uint8 Global_Current_Task = 1 ;
+extern volatile uint32 Os_Tick;
+volatile uint32 Os_Idle_Task_Tick;
 
-uint32 Task_PSP[Max_Tasks_Number] = {
-		T1_STACK_START,
-		T2_STACK_START,
-		T3_STACK_START,
-		T4_STACK_START,
-};
+Task_ControlBlock_t UserTasks[Max_Tasks_Number];
 
 /*************************************** Section : Functions Definitions ***************************************/
 
 
+void OS_TaskDelay(uint32 Copy_BlockCount){
+	/* Update Task blocking period */
+	UserTasks[Global_Current_Task].BlockCount = Copy_BlockCount + Os_Tick;
+	/* Update Task State */
+	UserTasks[Global_Current_Task].CurrentState = TASK_BlockedState;
+
+}
+
+void OS_IdleTask(){
+	for(;;){
+		TOG_BIT(Os_Idle_Task_Tick,1);
+	}
+}
+
 /**/
 void UpdateNextTask(){
-	Global_Current_Task++;
-	Global_Current_Task = Global_Current_Task % Max_Tasks_Number;
+
+	for (int TaskCount = 1; TaskCount < Max_Tasks_Number ; ++TaskCount) {
+
+		Global_Current_Task++;
+
+		Global_Current_Task = Global_Current_Task % Max_Tasks_Number;
+
+		if ((UserTasks[Global_Current_Task].CurrentState == TASK_ReadyState) && ( Global_Current_Task !=0 )) {
+			break;
+		}
+	}
+	/*All tasks are Blocked*/
+	if(UserTasks[Global_Current_Task].CurrentState == TASK_BlockedState){
+		Global_Current_Task =0; /*Jump to IDLE Task*/
+	}
 }
 
 
@@ -43,13 +66,16 @@ __attribute__ ((naked)) void Stack_InitScheduler_Stack(uint32 Copy_u32SchedTOS){
 
 	/* Branching indirect */
 	__asm volatile("BX LR");
-
 }
+
 
 uint32 GetCurrent_PSP_value(){
-	return Task_PSP[Global_Current_Task];
+	return UserTasks[Global_Current_Task].pspValue;
 }
 
+void SavePSP_Value(uint32 Currnt_PSP_value){
+	UserTasks[Global_Current_Task].pspValue = Currnt_PSP_value;
+}
 
 /**
  * @brief Switches the stack pointer to Process Stack Pointer (PSP).
@@ -99,19 +125,30 @@ void Stack_InitTasks_Stack() {
     uint32 *Local_pu32TaskPSP;
     uint32 Index = 0;
     uint8 j = 0;
-    /* Array of task function pointers */
-    void (*Local_u32TaskHandle[Max_Tasks_Number])(void) = {
-        Task1_Handler,
-        Task2_Handler,
-        Task3_Handler,
-        Task4_Handler
-    };
+
+    /*PSP Tasks Initialization*/
+    UserTasks[0].pspValue = IDLE_Task_STACK_START;
+    UserTasks[1].pspValue = T1_STACK_START;
+    UserTasks[2].pspValue = T2_STACK_START;
+    UserTasks[3].pspValue = T3_STACK_START;
+
+
+    /*Task Handler Initialization*/
+    UserTasks[0].TaskHandler = &OS_IdleTask;
+    UserTasks[1].TaskHandler = &Task1_Handler;
+    UserTasks[2].TaskHandler = &Task2_Handler;
+    UserTasks[3].TaskHandler = &Task3_Handler;
+
 
 
     /* Loop through each task to initialize its stack */
     for (Index = 0u; Index < Max_Tasks_Number; ++Index) {
-        /* Set the task's PSP address */
-        Local_pu32TaskPSP = (uint32 *)Task_PSP[Index];
+
+    	/*Initialize tasks as ReadyState*/
+    	UserTasks[Index].CurrentState = TASK_ReadyState;
+
+    	/* Set the task's PSP address */
+        Local_pu32TaskPSP = (uint32 *)UserTasks[Index].pspValue;
 
     	/* xPSR Register (Initialize Thumb instruction set) */
     	Local_pu32TaskPSP--;
@@ -119,7 +156,7 @@ void Stack_InitTasks_Stack() {
 
         /* PC Register (Task entry point) */
         Local_pu32TaskPSP--;
-        *Local_pu32TaskPSP = (uint32)Local_u32TaskHandle[Index];
+        *Local_pu32TaskPSP = (uint32)(UserTasks[Index].TaskHandler);
 
 
         /* LR Register (Dummy return address) */
@@ -134,7 +171,7 @@ void Stack_InitTasks_Stack() {
         }
 
         /* Save Current PSP of the task for retrieval */
-        Task_PSP[Index] = (uint32)Local_pu32TaskPSP;
+        UserTasks[Index].pspValue = (uint32)Local_pu32TaskPSP;
     }
 }
 /**
@@ -161,9 +198,6 @@ Std_ReturnType Enable_FaultException(){
     return E_OK;
 }
 
-void SavePSP_Value(uint32 Currnt_PSP_value){
-	Task_PSP[Global_Current_Task] = Currnt_PSP_value;
-}
 
 /**
  * @brief Handles Memory Management Fault.
