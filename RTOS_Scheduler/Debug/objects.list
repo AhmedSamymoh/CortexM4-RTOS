@@ -1,0 +1,7 @@
+"./MCAL/GPIO/GPIO_Program.o"
+"./MCAL/SYSTCK/SYSTICK_program.o"
+"./OS/Kernel_program.o"
+"./Src/main.o"
+"./Src/syscalls.o"
+"./Src/sysmem.o"
+"./Startup/startup_stm32f446retx.o"
