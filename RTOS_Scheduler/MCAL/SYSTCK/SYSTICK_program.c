@@ -49,67 +49,19 @@ Std_ReturnType SYSTICK_Init(void){
 }
 
 
-/*
- *
- * |-------| |-----------------------------|
- * |  xPSR | |*****************************|
- * |  PC   | |*****************************|
- * |  LR   | |*****************************|
- * |  R12  | |<CPU read them automatically>|
- * |  R3   | |*****************************|
- * |  R2   | |*****************************|
- * |  R1   | |*****************************|
- * |  R0   |	<-- Current PSP		<-- PSP
- * |-------| |-----------------------------|
- * |  R4   | |*****************************|
- * |  R5   | |*****************************|
- * |  R6   | |*****************************|
- * |  R7   | |***<we read them manually>***|
- * |  R8   | |*****************************|
- * |  R9   | |*****************************|
- * |  R10  | |*****************************|
- * |  R11  | |*****************************|
- * |-------| |-----------------------------|
- */
-__attribute__ ((naked))void SysTick_Handler(void) {
-	  Os_Tick++;
-    TOG_BIT(Os_Tick_Tog, 1);
 
+void SysTick_Handler(void) {
+
+	/*Update the OS Tick*/
+	Os_Tick++;
+    TOG_BIT(Os_Tick_Tog, 1);
     TOG_BIT((GPIOA->ODR), 5);
 
-    /* --- Save the context of the current task --- */
-	__asm volatile("MRS R0, PSP");
+    /*Unblock task*/
+    OS_UnblockTasks();
 
-	 __asm volatile("STMDB R0!,{R4-R11}");
-
-	/*pushing LR Value to call another function*/
-	__asm volatile("PUSH {LR}");
-
-	 __asm volatile("BL SavePSP_Value");
-
-    /* --- Retrieve the context of the next task --- */
-
-	 /*Decide next task to run*/
-	 __asm volatile("BL UpdateNextTask");
-
-	 /*Get its PSP Value*/
-	 __asm volatile("BL GetCurrent_PSP_value"); /*Return Value Of the Function is Returned To R0*/
-
-	 /*Popping the LR Register Value to return safely to the caller*/
-	 __asm volatile("POP {LR}");
-
-	 /*Using that psp value, retrieve remaining stack data (R4->R11)*/
-	 __asm volatile("LDM R0!,{R4-R11}");
-
-     /*so we should update the PSP Value */
-	 __asm volatile("MSR PSP, R0");
-
-
-	/*
-	 * 4. Branch to LR to return from Interrupt handler
-	 * LR --> contain EXC_RETURN Code
-	 */
-	__asm("BX LR");
+    /*Triggering PendSV Exception*/
+    SET_BIT(SCB->ICSR,28);
 
 }
 

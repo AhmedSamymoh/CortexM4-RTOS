@@ -26,21 +26,124 @@ Task_ControlBlock_t UserTasks[Max_Tasks_Number];
 
 
 void OS_TaskDelay(uint32 Copy_BlockCount){
-	/* Update Task blocking period */
-	UserTasks[Global_Current_Task].BlockCount = Copy_BlockCount + Os_Tick;
-	/* Update Task State */
-	UserTasks[Global_Current_Task].CurrentState = TASK_BlockedState;
+	if(Global_Current_Task != 0){/*Check if it 's Idle Task */
+		Enter_Critical_Section();
 
+		/* Update Task blocking period */
+		UserTasks[Global_Current_Task].BlockCount = Copy_BlockCount + Os_Tick;
+		/* Update Task State */
+		UserTasks[Global_Current_Task].CurrentState = TASK_BlockedState;
+	    /* Triggering PendSV Exception */
+	    SET_BIT(SCB->ICSR,28);
+
+	    Exit_Critical_Section();
+	}
 }
 
-void OS_IdleTask(){
+void OS_UnblockTasks(void){
+	uint8 Local_TaskCounter;
+	for (Local_TaskCounter = 0; Local_TaskCounter < Max_Tasks_Number; Local_TaskCounter++) {
+		if(UserTasks[Local_TaskCounter].CurrentState == TASK_BlockedState){
+			if(UserTasks[Local_TaskCounter].BlockCount <= Os_Tick){
+				/* Update Task State */
+				UserTasks[Local_TaskCounter].CurrentState = TASK_ReadyState;
+			}
+		}
+	}
+}
+
+void OS_IdleTask(void){
 	for(;;){
 		TOG_BIT(Os_Idle_Task_Tick,1);
 	}
 }
 
+
+/*
+ *
+ * |-------| |-----------------------------|
+ * |  xPSR | |*****************************|
+ * |  PC   | |*****************************|
+ * |  LR   | |*****************************|
+ * |  R12  | |<CPU read them automatically>|
+ * |  R3   | |*****************************|
+ * |  R2   | |*****************************|
+ * |  R1   | |*****************************|
+ * |  R0   |	<-- Current PSP		<-- PSP
+ * |-------| |-----------------------------|
+ * |  R4   | |*****************************|
+ * |  R5   | |*****************************|
+ * |  R6   | |*****************************|
+ * |  R7   | |***<we read them manually>***|
+ * |  R8   | |*****************************|
+ * |  R9   | |*****************************|
+ * |  R10  | |*****************************|
+ * |  R11  | |*****************************|
+ * |-------| |-----------------------------|
+ */
+__attribute__ ((naked)) void PendSV_Handler(void){
+
+	/* --- Save the context of the current task --- */
+	/*
+	* 1. Get the Current_PSP from CPU registers
+	* |-------|
+	* |  xPSR |
+	* |  PC   |
+	* |  LR   |
+	* |  R12  |
+	* |  R3   |
+	* |  R2   |
+	* |  R1   |
+	* |  R0   | <-- Current PSP
+	* |-------|
+	*/__asm volatile("MRS R0, PSP");
+	/*
+	* 2. using that psp value , store remaining stack data (R4->R11)
+	* |-------|
+	* |  R4   |
+	* |  R5   |
+	* |  R6   |
+	* |  R7   |
+	* |  R8   |
+	* |  R9   |
+	* |  R10  |
+	* |  R11  |
+	* |-------|
+	* The R0 now has the updated value of R0 after Saving GPRs*/
+	 __asm volatile("STMDB R0!,{R4-R11}");
+
+	/*pushing LR Value to call another function*/
+	__asm volatile("PUSH {LR}");
+
+	 __asm volatile("BL SavePSP_Value");
+
+	/* --- Retrieve the context of the next task --- */
+
+	 /*Decide next task to run*/
+	 __asm volatile("BL UpdateNextTask");
+
+	 /*Get its PSP Value*/
+	 __asm volatile("BL GetCurrent_PSP_value"); /*Return Value Of the Function is Returned To R0*/
+
+	 /*Popping the LR Register Value to return safely to the caller*/
+	 __asm volatile("POP {LR}");
+
+	 /*Using that psp value, retrieve remaining stack data (R4->R11)*/
+	 __asm volatile("LDM R0!,{R4-R11}");
+
+	 /*so we should update the PSP Value */
+	 __asm volatile("MSR PSP, R0");
+
+	/*
+	 * 4. Branch to LR to return from Interrupt handler
+	 * LR --> contain EXC_RETURN Code
+	 */
+	__asm("BX LR");
+
+}
+
 /**/
-void UpdateNextTask(){
+void UpdateNextTask(void){
 
 	for (int TaskCount = 1; TaskCount < Max_Tasks_Number ; ++TaskCount) {
 
@@ -69,7 +172,7 @@ __attribute__ ((naked)) void Stack_InitScheduler_Stack(uint32 Copy_u32SchedTOS){
 }
 
 
-uint32 GetCurrent_PSP_value(){
+uint32 GetCurrent_PSP_value(void){
 	return UserTasks[Global_Current_Task].pspValue;
 }
 

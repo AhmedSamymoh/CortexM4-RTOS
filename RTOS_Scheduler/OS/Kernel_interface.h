@@ -70,14 +70,18 @@ extern void Task3_Handler();
 
 /************************************* Section : Macro Functions Definitions ***********************************/
 
+#define Enter_Critical_Section()			do{ __asm volatile("MOV R0, #1"); __asm volatile("MSR PRIMASK, R0"); }while(0)
+#define Exit_Critical_Section()			    do{ __asm volatile("MOV R0, #0"); __asm volatile("MSR PRIMASK, R0"); }while(0)
+
 /**************************************** Section : Functions Declarations *************************************/
 
 void OS_TaskDelay(uint32 Copy_BlockCount);
-void OS_IdleTask();
-void UpdateNextTask();
-void Stack_InitTasks_Stack();
-Std_ReturnType Enable_FaultException();
-uint32 GetCurrent_PSP_value();
+void OS_IdleTask(void);
+void OS_UnblockTasks(void);
+void UpdateNextTask(void);
+void Stack_InitTasks_Stack(void);
+Std_ReturnType Enable_FaultException(void);
+uint32 GetCurrent_PSP_value(void);
 void SavePSP_Value(uint32 Currnt_PSP_value);
 
 __attribute__ ((naked)) void Stack_InitScheduler_Stack(uint32 Copy_u32SchedTOS);

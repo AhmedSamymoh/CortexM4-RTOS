@@ -54,9 +54,9 @@ int main(void)
 void Task1_Handler(){
 	while(1){
 		TOG_BIT(task1_Tick, 1);
-		OS_TaskDelay(3000);
+		OS_TaskDelay(600);
 		//printf("Task1 Handler \n");
-		//TOG_BIT((GPIOA->ODR), 6);
+		TOG_BIT((GPIOA->ODR), 6);
 	}
 
 }
@@ -64,10 +64,10 @@ void Task1_Handler(){
 void Task2_Handler(){
 	while(1){
 		TOG_BIT(task2_Tick, 1);
-		OS_TaskDelay(3000);
+		//OS_TaskDelay(20);
 
 		//printf("Task2 Handler \n");
-		//TOG_BIT((GPIOA->ODR), 7);
+		TOG_BIT((GPIOA->ODR), 7);
 	}
 
 
@@ -76,9 +76,9 @@ void Task2_Handler(){
 void Task3_Handler(){
 	while(1){
 		TOG_BIT(task3_Tick, 1);
-		OS_TaskDelay(3000);
+		OS_TaskDelay(300);
 		//printf("Task3 Handler \n");
-		//TOG_BIT((GPIOB->ODR), 6);
+		TOG_BIT((GPIOB->ODR), 6);
 	}
 
 }
