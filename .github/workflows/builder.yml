@@ -20,10 +20,13 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y gcc-arm-none-eabi make cmake ninja
+          sudo apt install -y gcc-arm-none-eabi make cmake ninja-build || \
+          (wget https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip && \
+          sudo unzip ninja-linux.zip -d /usr/local/bin/ && \
+          sudo chmod +x /usr/local/bin/ninja)
 
       - name: Configure Build System
-        run: cmake -S . -B build -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-arm-none-eabi.cmake
+        run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-arm-none-eabi.cmake
 
       - name: Build RTOS Scheduler
         run: cmake --build build
