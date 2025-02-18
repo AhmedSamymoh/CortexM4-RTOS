@@ -25,14 +25,16 @@ jobs:
           sudo unzip ninja-linux.zip -d /usr/local/bin/ && \
           sudo chmod +x /usr/local/bin/ninja)
 
-      - name: Configure Build System
-        run: cmake -S . -B build -G Ninja -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-arm-none-eabi.cmake
-
-      - name: Build RTOS Scheduler
-        run: cmake --build build
+      - name: Build Stm32Cube Project
+        run: |
+          # Change directory to RTOS_Scheduler/Debug
+          cd RTOS_Scheduler/Debug
+          
+          # Run make to build the project
+          make -j16 all
 
       - name: Save Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: rtos_scheduler_firmware
-          path: build/*.elf
+          path: RTOS_Scheduler/Debug/RTOS_Scheduler.hex
