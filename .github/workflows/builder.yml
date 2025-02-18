@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
   pull_request:
     branches:
       - main
@@ -17,24 +16,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y gcc-arm-none-eabi make cmake ninja-build || \
-          (wget https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip && \
-          sudo unzip ninja-linux.zip -d /usr/local/bin/ && \
-          sudo chmod +x /usr/local/bin/ninja)
+      - name: Build STM32CubeIDE Project
+        uses: xanderhendriks/action-build-stm32cubeide@v14.0
+        with:
+          project-path: 'RTOS_Scheduler'  # Main project folder
+          project-target: 'Debug'         # Adjust target as necessary (Debug/Release)
 
-      - name: Build Stm32Cube Project
-        run: |
-          # Change directory to RTOS_Scheduler/Debug
-          cd RTOS_Scheduler/Debug
-          
-          # Run make to build the project
-           make V=1 -j16 all
-
-      - name: Save Build Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v2
         with:
           name: rtos_scheduler_firmware
-          path: RTOS_Scheduler/Debug/RTOS_Scheduler.hex
+          path: 'RTOS_Scheduler/Debug/*.elf'  # Adjust if you want different build artifacts
