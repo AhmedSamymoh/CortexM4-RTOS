@@ -31,7 +31,7 @@ jobs:
           cd RTOS_Scheduler/Debug
           
           # Run make to build the project
-          make -j16 all
+           make V=1 -j16 all
 
       - name: Save Build Artifacts
         uses: actions/upload-artifact@v4
