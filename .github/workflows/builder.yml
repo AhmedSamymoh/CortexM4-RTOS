@@ -1,0 +1,35 @@
+name: Build RTOS Scheduler
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-arm-none-eabi make cmake ninja
+
+      - name: Configure Build System
+        run: cmake -S . -B build -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-arm-none-eabi.cmake
+
+      - name: Build RTOS Scheduler
+        run: cmake --build build
+
+      - name: Save Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtos_scheduler_firmware
+          path: build/*.elf
