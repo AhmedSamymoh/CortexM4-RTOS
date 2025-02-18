@@ -1,27 +1,51 @@
-name: Build RTOS Scheduler
+# name: Build RTOS Scheduler
+
+# on:
+#   push:
+#     branches:
+#       - main  # Trigger the workflow on push to the main branch
+#   pull_request:
+#     branches:
+#       - main  # Trigger the workflow on pull requests to the main branch
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest  # Use the latest Ubuntu environment
+
+#     steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@v3  # Check out the repository code
+
+#     - name: Set up ARM GCC toolchain
+#       run: |
+#         sudo apt-get update
+#         sudo apt-get install -y gcc-arm-none-eabi
+
+#     - name: Build the project
+#       run: |
+#         cd RTOS_Scheduler/Debug
+#         make -j16 all
+
+
+#         name: Build STM32CubeIDE Project
 
 on:
   push:
     branches:
-      - main  # Trigger the workflow on push to the main branch
+      - main  # or specify the branch you want to trigger the build on
   pull_request:
     branches:
-      - main  # Trigger the workflow on pull requests to the main branch
+      - main  # or specify the target branch for PRs
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # Use the latest Ubuntu environment
-
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3  # Check out the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Set up ARM GCC toolchain
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi
-
-    - name: Build the project
-      run: |
-        cd RTOS_Scheduler/Debug
-        make -j16 all
+      - name: Set up STM32CubeIDE Docker image
+        uses: xanderhendriks/action-build-stm32cubeide@v10.0
+        with:
+          project-path: 'RTOS_Scheduler'  # Adjust this to your actual project path
+          project-target: 'RTOS_Scheduler'  # Adjust this to your actual target configuration
