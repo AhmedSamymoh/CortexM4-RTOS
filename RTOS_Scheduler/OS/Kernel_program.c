@@ -110,6 +110,55 @@ Std_ReturnType task_peek(uint8* taskId){
 	return retVal;
 }
 
+/**
+ * @brief Validate FIFO queue operations (for testing)
+ * @return E_OK if all tests pass, E_NOT_OK if any test fails
+ */
+Std_ReturnType validate_queue_operations(void){
+	uint8 testId, retrievedId;
+	
+	/* Test 1: Initialize queue */
+	task_queue_init();
+	if(ReadyTaskQueue.count != 0) return E_NOT_OK;
+	
+	/* Test 2: Enqueue operation */
+	testId = 1;
+	if(task_enqueue(testId) != E_OK) return E_NOT_OK;
+	if(ReadyTaskQueue.count != 1) return E_NOT_OK;
+	
+	/* Test 3: Peek operation */
+	if(task_peek(&retrievedId) != E_OK) return E_NOT_OK;
+	if(retrievedId != testId) return E_NOT_OK;
+	if(ReadyTaskQueue.count != 1) return E_NOT_OK; /* Count should remain unchanged */
+	
+	/* Test 4: Dequeue operation */
+	if(task_dequeue(&retrievedId) != E_OK) return E_NOT_OK;
+	if(retrievedId != testId) return E_NOT_OK;
+	if(ReadyTaskQueue.count != 0) return E_NOT_OK;
+	
+	/* Test 5: Dequeue from empty queue */
+	if(task_dequeue(&retrievedId) == E_OK) return E_NOT_OK; /* Should fail */
+	
+	/* Test 6: Enqueue invalid task ID */
+	if(task_enqueue(Max_Tasks_Number) == E_OK) return E_NOT_OK; /* Should fail */
+	
+	return E_OK; /* All tests passed */
+}
+
+/**
+ * @brief Get the current number of tasks in the ready queue (for debugging)
+ * @return Number of tasks currently in the ready queue
+ */
+uint8 get_ready_queue_count(void){
+	uint8 count;
+	
+	Enter_Critical_Section();
+	count = ReadyTaskQueue.count;
+	Exit_Critical_Section();
+	
+	return count;
+}
+
 
 void OS_TaskDelay(uint32 Copy_BlockCount){
 	if(Global_Current_Task != 0){/*Check if it 's Idle Task */

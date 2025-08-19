@@ -102,6 +102,12 @@ Std_ReturnType task_dequeue(uint8* taskId);
 Std_ReturnType task_peek(uint8* taskId);
 void task_queue_init(void);
 
+/* Queue validation function for testing */
+Std_ReturnType validate_queue_operations(void);
+
+/* Queue status function for debugging */
+uint8 get_ready_queue_count(void);
+
 __attribute__ ((naked)) void Stack_InitScheduler_Stack(uint32 Copy_u32SchedTOS);
 __attribute__ ((naked)) void ChangeToPSP();
 
