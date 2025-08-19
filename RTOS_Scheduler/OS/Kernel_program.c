@@ -21,8 +21,94 @@ extern volatile uint32 Os_Tick;
 volatile uint32 Os_Idle_Task_Tick;
 
 Task_ControlBlock_t UserTasks[Max_Tasks_Number];
+TaskQueue_t ReadyTaskQueue;
 
 /*************************************** Section : Functions Definitions ***************************************/
+
+/**
+ * @brief Initialize the FIFO task queue
+ */
+void task_queue_init(void){
+	ReadyTaskQueue.front = 0;
+	ReadyTaskQueue.rear = 0;
+	ReadyTaskQueue.count = 0;
+}
+
+/**
+ * @brief Add a task to the FIFO queue (thread-safe)
+ * @param taskId: ID of the task to enqueue
+ * @return E_OK on success, E_NOT_OK on overflow
+ */
+Std_ReturnType task_enqueue(uint8 taskId){
+	Std_ReturnType retVal = E_NOT_OK;
+	
+	if(taskId >= Max_Tasks_Number){
+		return E_NOT_OK; /* Invalid task ID */
+	}
+	
+	Enter_Critical_Section();
+	
+	if(ReadyTaskQueue.count < Max_Tasks_Number){
+		ReadyTaskQueue.taskIds[ReadyTaskQueue.rear] = taskId;
+		ReadyTaskQueue.rear = (ReadyTaskQueue.rear + 1) % Max_Tasks_Number;
+		ReadyTaskQueue.count++;
+		retVal = E_OK;
+	}
+	
+	Exit_Critical_Section();
+	
+	return retVal;
+}
+
+/**
+ * @brief Remove a task from the FIFO queue (thread-safe)
+ * @param taskId: Pointer to store the dequeued task ID
+ * @return E_OK on success, E_NOT_OK on underflow
+ */
+Std_ReturnType task_dequeue(uint8* taskId){
+	Std_ReturnType retVal = E_NOT_OK;
+	
+	if(taskId == NULL){
+		return E_NOT_OK;
+	}
+	
+	Enter_Critical_Section();
+	
+	if(ReadyTaskQueue.count > 0){
+		*taskId = ReadyTaskQueue.taskIds[ReadyTaskQueue.front];
+		ReadyTaskQueue.front = (ReadyTaskQueue.front + 1) % Max_Tasks_Number;
+		ReadyTaskQueue.count--;
+		retVal = E_OK;
+	}
+	
+	Exit_Critical_Section();
+	
+	return retVal;
+}
+
+/**
+ * @brief Peek at the next task in the FIFO queue without removing it (thread-safe)
+ * @param taskId: Pointer to store the peeked task ID
+ * @return E_OK on success, E_NOT_OK if queue is empty
+ */
+Std_ReturnType task_peek(uint8* taskId){
+	Std_ReturnType retVal = E_NOT_OK;
+	
+	if(taskId == NULL){
+		return E_NOT_OK;
+	}
+	
+	Enter_Critical_Section();
+	
+	if(ReadyTaskQueue.count > 0){
+		*taskId = ReadyTaskQueue.taskIds[ReadyTaskQueue.front];
+		retVal = E_OK;
+	}
+	
+	Exit_Critical_Section();
+	
+	return retVal;
+}
 
 
 void OS_TaskDelay(uint32 Copy_BlockCount){
@@ -47,6 +133,10 @@ void OS_UnblockTasks(void){
 			if(UserTasks[Local_TaskCounter].BlockCount <= Os_Tick){
 				/* Update Task State */
 				UserTasks[Local_TaskCounter].CurrentState = TASK_ReadyState;
+				/* Add task back to ready queue (except idle task) */
+				if(Local_TaskCounter != 0){
+					task_enqueue(Local_TaskCounter);
+				}
 			}
 		}
 	}
@@ -144,20 +234,25 @@ __attribute__ ((naked)) void PendSV_Handler(void){
 
 /**/
 void UpdateNextTask(void){
-
-	for (int TaskCount = 1; TaskCount < Max_Tasks_Number ; ++TaskCount) {
-
-		Global_Current_Task++;
-
-		Global_Current_Task = Global_Current_Task % Max_Tasks_Number;
-
-		if ((UserTasks[Global_Current_Task].CurrentState == TASK_ReadyState) && ( Global_Current_Task !=0 )) {
-			break;
-		}
+	uint8 nextTaskId;
+	
+	/* Mark current task as ready if it's not blocked and not idle */
+	if(Global_Current_Task != 0 && UserTasks[Global_Current_Task].CurrentState == TASK_RunningState){
+		UserTasks[Global_Current_Task].CurrentState = TASK_ReadyState;
+		/* Re-enqueue the current task to maintain FIFO order */
+		task_enqueue(Global_Current_Task);
 	}
-	/*All tasks are Blocked*/
-	if(UserTasks[Global_Current_Task].CurrentState == TASK_BlockedState){
-		Global_Current_Task =0; /*Jump to IDLE Task*/
+	
+	/* Try to get next task from FIFO queue */
+	if(task_dequeue(&nextTaskId) == E_OK){
+		/* Found a ready task in queue */
+		Global_Current_Task = nextTaskId;
+		UserTasks[Global_Current_Task].CurrentState = TASK_RunningState;
+	}
+	else{
+		/* No ready tasks in queue, run idle task */
+		Global_Current_Task = 0;
+		UserTasks[0].CurrentState = TASK_RunningState;
 	}
 }
 
@@ -229,12 +324,14 @@ void Stack_InitTasks_Stack() {
     uint32 Index = 0;
     uint8 j = 0;
 
+    /* Initialize FIFO queue */
+    task_queue_init();
+
     /*PSP Tasks Initialization*/
     UserTasks[0].pspValue = IDLE_Task_STACK_START;
     UserTasks[1].pspValue = T1_STACK_START;
     UserTasks[2].pspValue = T2_STACK_START;
     UserTasks[3].pspValue = T3_STACK_START;
-
 
     /*Task Handler Initialization*/
     UserTasks[0].TaskHandler = &OS_IdleTask;
@@ -242,13 +339,22 @@ void Stack_InitTasks_Stack() {
     UserTasks[2].TaskHandler = &Task2_Handler;
     UserTasks[3].TaskHandler = &Task3_Handler;
 
-
-
     /* Loop through each task to initialize its stack */
     for (Index = 0u; Index < Max_Tasks_Number; ++Index) {
-
-    	/*Initialize tasks as ReadyState*/
-    	UserTasks[Index].CurrentState = TASK_ReadyState;
+    	/* Initialize task ID */
+    	UserTasks[Index].taskId = Index;
+    	
+    	/* Initialize task priority */
+    	if(Index == 0){
+    		UserTasks[Index].priority = TASK_PRIORITY_IDLE;
+    		UserTasks[Index].CurrentState = TASK_ReadyState; /* Idle task starts ready */
+    	}
+    	else{
+    		UserTasks[Index].priority = TASK_PRIORITY_NORMAL;
+    		UserTasks[Index].CurrentState = TASK_ReadyState;
+    		/* Add non-idle tasks to ready queue */
+    		task_enqueue(Index);
+    	}
 
     	/* Set the task's PSP address */
         Local_pu32TaskPSP = (uint32 *)UserTasks[Index].pspValue;
@@ -261,11 +367,9 @@ void Stack_InitTasks_Stack() {
         Local_pu32TaskPSP--;
         *Local_pu32TaskPSP = (uint32)(UserTasks[Index].TaskHandler);
 
-
         /* LR Register (Dummy return address) */
         Local_pu32TaskPSP--;
         *Local_pu32TaskPSP = Dummy_LR;
-
 
         /* Initialize General-Purpose Registers (R0-R12) */
         for (j = 0; j < 13; j++) {

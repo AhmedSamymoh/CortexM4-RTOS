@@ -25,15 +25,26 @@
 typedef enum {
 	TASK_ReadyState,
 	TASK_BlockedState,
+	TASK_RunningState,
 } TaskState_t;
 
 typedef struct {
+	uint8 taskId;
+	uint8 priority;
 	uint32 pspValue;
 	uint32 BlockCount;
 	TaskState_t CurrentState;
 	void(*TaskHandler)();
 
 } Task_ControlBlock_t;
+
+/* FIFO Queue structure for task scheduling */
+typedef struct {
+	uint8 taskIds[Max_Tasks_Number];
+	uint8 front;
+	uint8 rear;
+	uint8 count;
+} TaskQueue_t;
 
 
 
@@ -84,6 +95,12 @@ void Stack_InitTasks_Stack(void);
 Std_ReturnType Enable_FaultException(void);
 uint32 GetCurrent_PSP_value(void);
 void SavePSP_Value(uint32 Currnt_PSP_value);
+
+/* FIFO Queue Operations */
+Std_ReturnType task_enqueue(uint8 taskId);
+Std_ReturnType task_dequeue(uint8* taskId);
+Std_ReturnType task_peek(uint8* taskId);
+void task_queue_init(void);
 
 __attribute__ ((naked)) void Stack_InitScheduler_Stack(uint32 Copy_u32SchedTOS);
 __attribute__ ((naked)) void ChangeToPSP();

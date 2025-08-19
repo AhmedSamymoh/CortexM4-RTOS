@@ -25,6 +25,18 @@
 /****************************************** Section: Macro Declarations ****************************************/
 #define Max_Tasks_Number				4u
 
+/* Queue Error Codes */
+#define QUEUE_OK						0u
+#define QUEUE_OVERFLOW					1u
+#define QUEUE_UNDERFLOW					2u
+#define QUEUE_EMPTY						3u
+
+/* Task Priority Levels */
+#define TASK_PRIORITY_IDLE				0u
+#define TASK_PRIORITY_LOW				1u
+#define TASK_PRIORITY_NORMAL			2u
+#define TASK_PRIORITY_HIGH				3u
+
 
 
 /************************************* Section : Global Variables Definitions **********************************/
